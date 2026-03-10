@@ -1,0 +1,64 @@
+Here's how to add loading state to your component:
+jsximport { useEffect, useState } from "react"
+import Header from "./header";
+import Footer from "./footer";
+import { jwtDecode } from "jwt-decode";
+
+const AdminPage = () => {
+  const [userRole, setUserRole] = useState("");
+  const [userId, setUserId] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [loading, setLoading] = useState(true); // 👈 start as true
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = jwtDecode(token);
+        setUserRole(payload.userRole);
+        setUserId(payload.userId);
+        setUserName(payload.userName);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    setLoading(false); // 👈 runs whether token exists or not
+  }, [])
+
+  if (loading) {
+    return <p>Loading...</p> // 👈 or your custom spinner
+  }
+
+  return (
+    <>
+      {/* MAKE CUSTOM HEADER FOR ADMIN */}
+      <div>
+        {userId} {userName} {userRole}
+      </div>
+    </>
+  )
+}
+
+export default AdminPage;
+The key idea is simple — loading starts as true, which blocks the main UI from rendering. Once the useEffect finishes (success or error), you set it to false and the real content shows.
+A couple of things worth noting:
+Why setLoading(false) goes outside the if block — if there's no token, you still want to stop the loading state, so it needs to run regardless.
+For async DB calls (when you fetch userEmail later), the same pattern applies but inside your fetch/axios call:
+jsxuseEffect(() => {
+  const fetchEmail = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/user/${userId}`);
+      const data = await res.json();
+      setUserEmail(data.email);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false); // 👈 'finally' ensures this always runs
+    }
+  };
+
+  if (userId) fetchEmail();
+}, [userId]);
+Using finally is cleaner for async calls since it runs whether the request succeeds or fails.
